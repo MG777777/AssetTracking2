@@ -171,7 +171,7 @@ static void ListAsset(MyDbContext context)
 }
 static void EditAsset(MyDbContext Context) // Edit Asset
 {
-    ListAsset(Context); // This to list Assets.
+    ListAsset(Context); // List Assets.
     List<Asset> Result = Context.Assets.Include(x => x.Office).ToList();
     Console.Write("Enter the ID of the Asset to edit: ");
     if (int.TryParse(Console.ReadLine(), out int Id))
@@ -220,6 +220,7 @@ static void EditAsset(MyDbContext Context) // Edit Asset
                 assetToEdit.Model = assetModel;
                 assetToEdit.PriceinUsd = assetPriceinUsd;
                 assetToEdit.PurchaseDate = assetPurchaseDate;
+                assetToEdit.OfficeId = myOffice.Id;
 
                 Context.Assets.Update(assetToEdit);
                 Context.SaveChanges();
@@ -250,7 +251,7 @@ static void EditAsset(MyDbContext Context) // Edit Asset
 }
 static void RemoveAsset(MyDbContext Context)// Delete Asset
 {
-    ListAsset(Context); // List Assets.
+    ListAsset(Context);
     List<Asset> Result = Context.Assets.Include(x => x.Office).ToList();
 
     Console.Write("Enter the ID of the Asset to Delete: ");
@@ -288,35 +289,14 @@ static void SaveAsset(MyDbContext Context) // Save Asset Report to the file
     {
         Directory.CreateDirectory(directoryPath);
     }
-    DateTime currentDate = DateTime.Now;
     List<Asset> Result = Context.Assets.Include(x => x.Office).ToList();
     double totalUsdSum = 0.0;
     using (StreamWriter writer = new StreamWriter(dataFilePath)) //To write Assets report into a text file.
     {
         writer.WriteLine("Type".PadRight(10) + "Brand".PadRight(12) + "Model".PadRight(10) + "Office".PadRight(10) + "Purchase Date".PadRight(15) + "Price in USD".PadRight(15) + "Currency".PadRight(10) + "Local Price Today".PadRight(10));
         writer.WriteLine("----".PadRight(10) + "-----".PadRight(12) + "-----".PadRight(10) + "------".PadRight(10) + "-------------".PadRight(15) + "------------".PadRight(15) + "--------".PadRight(10) + "-----------------".PadRight(10));
-
         foreach (Asset asset in Result)
         {
-            DateTime threeYearsFromNow = currentDate.AddYears(3);
-            DateTime threeMonthsAgo = currentDate.AddMonths(-3);
-            DateTime sixMonthsAgo = currentDate.AddMonths(-6);
-
-            if (asset.PurchaseDate > threeMonthsAgo && asset.PurchaseDate < threeYearsFromNow)// Check if the date is less than 3 months away from 3 years
-            {
-                writer.WriteLine("\n\nAssets have a Purchase Date is less than 3 months away from 3 years");
-                writer.WriteLine("**************************************************************\n");
-                writer.WriteLine("Type".PadRight(10) + "Brand".PadRight(12) + "Model".PadRight(10) + "Office".PadRight(10) + "Purchase Date".PadRight(15) + "Price in USD".PadRight(15) + "Currency".PadRight(10) + "Local Price Today".PadRight(10));
-                writer.WriteLine("----".PadRight(10) + "-----".PadRight(12) + "-----".PadRight(10) + "------".PadRight(10) + "-------------".PadRight(15) + "------------".PadRight(15) + "--------".PadRight(10) + "-----------------".PadRight(10));    
-            }
-            else if (asset.PurchaseDate > sixMonthsAgo && asset.PurchaseDate < threeYearsFromNow)// Check if the date is less than 6 months away from 3 years
-            {
-                writer.WriteLine("\n\nAssets have a Purchase Date is less than 6 months away from 3 years");
-                writer.WriteLine("**************************************************************\n");
-                writer.WriteLine("Type".PadRight(10) + "Brand".PadRight(12) + "Model".PadRight(10) + "Office".PadRight(10) + "Purchase Date".PadRight(15) + "Price in USD".PadRight(15) + "Currency".PadRight(10) + "Local Price Today".PadRight(10));
-                writer.WriteLine("----".PadRight(10) + "-----".PadRight(12) + "-----".PadRight(10) + "------".PadRight(10) + "-------------".PadRight(15) + "------------".PadRight(15) + "--------".PadRight(10) + "-----------------".PadRight(10));    
-            }
-
             totalUsdSum += asset.PriceinUsd;
             writer.Write($"{asset.Name.ToString().PadRight(10)} {asset.Brand.PadRight(12)} {asset.Model.PadRight(10)} {asset.Office.Name.PadRight(10)} {asset.PurchaseDate.ToShortDateString().PadRight(15)} {asset.PriceinUsd.ToString().PadRight(15)} {asset.Office.Currency.PadRight(10)}{asset.Localpricetoday.ToString()}\n");
         }
@@ -324,6 +304,40 @@ static void SaveAsset(MyDbContext Context) // Save Asset Report to the file
         writer.WriteLine($"Total Assets: {Result.Count}");
         writer.WriteLine("\n\n---------------------------------");
         writer.WriteLine($"Total Price in USD : {totalUsdSum}");
+        ////////////////////////////////////////////////////////// Create separate lists for assets that meet different End life
+        DateTime currentDate = DateTime.Now;
+        DateTime threeYearsFromNow = currentDate.AddYears(3);
+        DateTime threeMonthsAgo = currentDate.AddMonths(-3);
+        DateTime sixMonthsAgo = currentDate.AddMonths(-6);
+        List<Asset> assetsLessThan3Months = Result.Where(asset =>
+            asset.PurchaseDate > threeMonthsAgo && asset.PurchaseDate < threeYearsFromNow
+        ).ToList();
+        List<Asset> assetsLessThan6Months = Result.Where(asset =>
+            asset.PurchaseDate > sixMonthsAgo && asset.PurchaseDate < threeYearsFromNow
+        ).ToList();
+        /////////////////////////////////////////////////////////
+        if (assetsLessThan3Months.Count > 0)// Report for assets less than 3 months away from 3 years
+        {
+            writer.WriteLine("\n\nAssets have a Purchase Date less than 3 months away from 3 years");
+            writer.WriteLine("**************************************************************\n");
+            PrintAssetTable(writer, assetsLessThan3Months);
+        }
+        if (assetsLessThan6Months.Count > 0)// Report for assets less than 6 months away from 3 years
+        {
+            writer.WriteLine("\n\nAssets have a Purchase Date less than 6 months away from 3 years");
+            writer.WriteLine("**************************************************************\n");
+            PrintAssetTable(writer, assetsLessThan6Months);
+        }
+        void PrintAssetTable(StreamWriter writer, List<Asset> assets)// This method to save reports in the same file
+        {
+            writer.WriteLine("Type".PadRight(10) + "Brand".PadRight(12) + "Model".PadRight(10) + "Office".PadRight(10) + "Purchase Date".PadRight(15) + "Price in USD".PadRight(15) + "Currency".PadRight(10) + "Local Price Today".PadRight(10));
+            writer.WriteLine("----".PadRight(10) + "-----".PadRight(12) + "-----".PadRight(10) + "------".PadRight(10) + "-------------".PadRight(15) + "------------".PadRight(15) + "--------".PadRight(10) + "-----------------".PadRight(10));
+
+            foreach (Asset asset in assets)
+            {
+                writer.Write($"{asset.Name.ToString().PadRight(10)} {asset.Brand.PadRight(12)} {asset.Model.PadRight(10)} {asset.Office.Name.PadRight(10)} {asset.PurchaseDate.ToShortDateString().PadRight(15)} {asset.PriceinUsd.ToString().PadRight(15)} {asset.Office.Currency.PadRight(10)}{asset.Localpricetoday.ToString()}\n");
+            }
+        }
         Console.WriteLine();
     }
     Console.ForegroundColor = ConsoleColor.Green;
