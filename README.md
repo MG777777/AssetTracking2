@@ -15,3 +15,4 @@ then update-database (ckick enter) go to database and check, open command termin
 6 - Run the App and enjoy.
 
 Note: When you will exit and save the app by choosing number 5 in the app so your report saved into drive C: folder name AssetTracking2 like this C:\AssetTracking2.
+Enjoy 😎
