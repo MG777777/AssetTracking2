@@ -10,7 +10,7 @@
 4 - Check MyDbContext.cs file it should have a database (Asset) please update database by terminal command update- database (to open terminal command click on Tools > NuGet Package Manager > Package Manager Console.
 
 5 - Install Migrations by command terminal write add-migration AddingAssetsAndOfficesTables (click enter)
-then add-migration SeedingOfficesData (click enter) after installing go to database and chech if all tables is loaded correct.
+then update-database (ckick enter) go to database and check, open command terminal write add-migration SeedingOfficesData (click enter) then update-database after installing, go to database and check if all tables is loaded correct.
 
 6 - Run the App and enjoy.
 
